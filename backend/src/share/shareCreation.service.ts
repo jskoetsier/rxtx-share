@@ -128,7 +128,13 @@ export class ShareCreationService {
         "You need at least on file in your share to complete it.",
       );
 
-    await this.clamScanService.checkAndRemove(share.id);
+    try {
+      await this.clamScanService.checkAndRemove(share.id);
+    } catch (err) {
+      this.logger.warn(
+        `ClamAV scan skipped for share ${id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
     const afterScan = await this.prisma.share.findUnique({ where: { id } });
     if (afterScan?.removedReason) {
       throw new BadRequestException(afterScan.removedReason);
