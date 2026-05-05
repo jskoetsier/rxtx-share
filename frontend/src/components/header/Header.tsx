@@ -194,7 +194,7 @@ const Header = () => {
         <Link href="/" passHref>
           <Group>
             <Logo height={35} width={35} />
-            <Text weight={600}>{config.get("general.appName")}</Text>
+            <Text weight={600}>{String(config.get("general.appName"))}</Text>
           </Group>
         </Link>
         <Group spacing={5} className={classes.links}>

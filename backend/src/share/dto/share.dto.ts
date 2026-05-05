@@ -29,7 +29,7 @@ export class ShareDTO {
   @Expose()
   size: number;
 
-  from(partial: Partial<ShareDTO>) {
+  from(partial: Partial<ShareDTO> | object) {
     return plainToClass(ShareDTO, partial, { excludeExtraneousValues: true });
   }
 

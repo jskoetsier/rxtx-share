@@ -12,8 +12,11 @@ import * as fs from "fs";
 import { PrismaService } from "src/prisma/prisma.service";
 import { stringToTimespan } from "src/utils/date.util";
 import { parse as yamlParse } from "yaml";
-import { YamlConfig } from "../../prisma/seed/config.seed";
+import { YamlConfig } from "../../prisma/seed/config.variables";
 import { CONFIG_FILE } from "src/constants";
+import type { ConfigKey, ConfigParsedValue, ConfigValueForKey } from "./config-value.types";
+
+export type { ConfigKey, ConfigParsedValue, ConfigValueForKey } from "./config-value.types";
 
 /**
  * ConfigService extends EventEmitter to allow listening for config updates,
@@ -92,7 +95,10 @@ export class ConfigService extends EventEmitter {
     });
   }
 
-  get(key: `${string}.${string}`): any {
+  get<K extends ConfigKey>(key: K): ConfigValueForKey<K>;
+  get(key: string): ConfigParsedValue;
+  // Implementation return is unspecific; overloads provide per-key types to callers.
+  get(key: string): any {
     const configVariable = this.configVariables.filter(
       (variable) => `${variable.category}.${variable.name}` == key,
     )[0];
@@ -102,11 +108,15 @@ export class ConfigService extends EventEmitter {
     const value = configVariable.value ?? configVariable.defaultValue;
 
     if (configVariable.type == "number" || configVariable.type == "filesize")
-      return parseInt(value);
+      return parseInt(value, 10);
     if (configVariable.type == "boolean") return value == "true";
     if (configVariable.type == "string" || configVariable.type == "text")
       return value;
     if (configVariable.type == "timespan") return stringToTimespan(value);
+
+    throw new Error(
+      `Unsupported config type ${(configVariable as Config).type} for ${key}`,
+    );
   }
 
   async getByCategory(category: string) {

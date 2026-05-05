@@ -13,13 +13,14 @@ const Footer = () => {
     config.get("legal.privacyPolicyUrl") ||
     config.get("legal.privacyPolicyText")
   );
-  const imprintUrl =
-    (!config.get("legal.imprintText") && config.get("legal.imprintUrl")) ||
-    "/imprint";
-  const privacyUrl =
-    (!config.get("legal.privacyPolicyText") &&
-      config.get("legal.privacyPolicyUrl")) ||
-    "/privacy";
+  const imprintUrl: string =
+    ((!config.get("legal.imprintText") &&
+      String(config.get("legal.imprintUrl"))) ||
+      "/imprint") as string;
+  const privacyUrl: string =
+    ((!config.get("legal.privacyPolicyText") &&
+      String(config.get("legal.privacyPolicyUrl"))) ||
+      "/privacy") as string;
 
   const isMobile = useMediaQuery("(max-width: 700px)");
 
@@ -38,7 +39,7 @@ const Footer = () => {
           </Anchor>
         </Text>
         <div>
-          {config.get("legal.enabled") && (
+          {config.get("legal.enabled") === true && (
             <Text size="xs" color="dimmed" align="right">
               {hasImprint && (
                 <Anchor size="xs" href={imprintUrl}>

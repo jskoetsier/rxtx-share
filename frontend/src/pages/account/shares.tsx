@@ -132,7 +132,7 @@ const MyShares = () => {
                           showShareInformationsModal(
                             modals,
                             share,
-                            parseInt(config.get("share.maxSize")),
+                            Number(config.get("share.maxSize")),
                           );
                         }}
                       >

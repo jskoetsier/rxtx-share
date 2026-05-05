@@ -1,54 +1,92 @@
-> ## ⚠️ Project Archived
->
-> After much consideration, I've chosen to focus my limited time and energy on my other project, [Pocket ID](https://github.com/pocket-id/pocket-id). As a solo developer, I've found it difficult to actively maintain multiple open source projects with the care and attention they deserve.
->
-> If you're interested in continuing this work through a fork, I'd be happy to link to it here in the README.
->
-> Thanks to all the contributors and users who have supported Rxtx Share over the years :)
+<!--
+Version: 1.0.0
+Last updated: 2026-05-05
+Author: Rxtx Share maintainers
+-->
 
-# <div align="center"><img  src="https://user-images.githubusercontent.com/58886915/166198400-c2134044-1198-4647-a8b6-da9c4a204c68.svg" width="40"/> </br>Rxtx Share</div>
+# Rxtx Share
 
-[![](https://dcbadge.limes.pink/api/server/wHRQ9nFRcK)](https://discord.gg/wHRQ9nFRcK) [![](https://img.shields.io/badge/Crowdin-2E3340.svg?style=for-the-badge&logo=Crowdin&logoColor=white)](https://crowdin.com/project/rxtx-share) [![](https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=#white)](https://github.com/sponsors/stonith404)
+Self-hosted file sharing: create time-limited links, optional passwords, email notifications, and ZIP downloads—similar in spirit to consumer “send big files” services, but under your control.
 
----
+## Features
 
-Rxtx Share is a self-hosted file sharing platform and an alternative for WeTransfer.
+- Chunked uploads for large files  
+- Share links with expiration  
+- Passwords, view limits, and optional ClamAV scanning  
+- Email recipients and reverse-share (“request files”) flows  
+- Local disk or S3-backed storage  
+- Local auth, LDAP, and OAuth/OIDC (GitHub, Google, Microsoft, Discord, generic OIDC)  
+- Admin UI for configuration; optional `config.yaml` for locked settings  
+- Internationalized UI (many locales)
 
-## ✨ Features
+## Architecture
 
-- Share files using a link
-- Unlimited file size (restricted only by disk space)
-- Set an expiration date for shares
-- Secure shares with visitor limits and passwords
-- Email recipients
-- Reverse shares
-- OIDC and LDAP authentication
-- Integration with ClamAV for security scans
-- Different file providers: local storage and S3
+Monorepo with two applications:
 
-## 🐧 Get to know Rxtx Share
+| Part | Stack | Default URL |
+| --- | --- | --- |
+| **Backend** | NestJS, Prisma, SQLite (or your DB URL) | `http://localhost:8080` — routes under `/api` |
+| **Frontend** | Next.js 14 (Pages Router), Mantine v6 | `http://localhost:3333` in dev |
 
-- [Demo](https://rxtx-share.dev.eliasschneider.com)
-- [Review by DB Tech](https://www.youtube.com/watch?v=rWwNeZCOPJA)
+Production often runs both behind a reverse proxy (e.g. Caddy): `/api` → NestJS, everything else → Next.js.
 
-<img src="https://user-images.githubusercontent.com/58886915/225038319-b2ef742c-3a74-4eb6-9689-4207a36842a4.png" width="700"/>
+## Quick start (Docker)
 
-## ⌨️ Setup
+1. Copy or use the provided `docker-compose.yml` (and adjust volumes/env as needed).  
+2. Run:
 
-### Installation with Docker (recommended)
+   ```bash
+   docker compose up -d
+   ```
 
-1. Download the `docker-compose.yml` file
-2. Run `docker compose up -d`
+3. Open the app (default `http://localhost:3000` in many setups).
 
-The website is now listening on `http://localhost:3000`, have fun with Rxtx Share 🐧!
+Data (uploads and the default SQLite file) usually live under `backend/data/` in the container layout described in this project’s Docker docs.
 
-> [!TIP]
-> Checkout [Pocket ID](https://github.com/stonith404/pocket-id), a user-friendly OIDC provider that lets you easily log in to services like Rxtx Share using Passkeys.
+## Local development
 
-## 📚 Documentation
+From the repository root:
 
-For more installation options and advanced configurations, please refer to the [documentation](https://stonith404.github.io/rxtx-share).
+```bash
+# Dependencies
+cd backend && npm install && cd ../frontend && npm install
 
-## 🖤 Contribute
+# Database (SQLite default)
+cd backend && npx prisma db push && npx prisma db seed
 
-We would love it if you want to help make Rxtx Share better! You can either [help to translate](https://stonith404.github.io/rxtx-share/help-out/translate) Rxtx Share or [contribute to the codebase](https://stonith404.github.io/rxtx-share/help-out/contribute).
+# Terminal 1 — API
+cd backend && npm run dev
+
+# Terminal 2 — UI
+cd frontend && npm run dev
+```
+
+The frontend expects `API_URL` (default `http://localhost:8080`) when calling the backend.
+
+Useful scripts (see each `package.json`):
+
+- `npm run format` / `npm run lint` at repo root  
+- `cd backend && npm run build`  
+- `cd backend && npm run test:system` (Postman/Newman against a running API)
+
+## Configuration
+
+- **Admin UI**: `/admin/config/...` (requires an admin account).  
+- **YAML**: optional `config.yaml` (see `config.example.yaml`); some keys can be marked locked and only set there.  
+- **Precedence**: YAML → database → seeded defaults (details in project docs).
+
+## Documentation
+
+Extended guides (install variants, OAuth, upgrades, contributing) live in the **`docs/`** site sources in this repo and may be published separately; check the project’s documentation link in the repo metadata or `package.json` for the current URL.
+
+## Security
+
+Report vulnerabilities responsibly; see `SECURITY.md`.
+
+## Contributing
+
+Translations and code contributions are welcome. Use the repository’s `CONTRIBUTING.md` and coding conventions (`eslint` / `prettier` as configured).
+
+## License
+
+See `LICENSE` in the repository root.

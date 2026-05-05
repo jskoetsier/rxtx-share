@@ -1,6 +1,7 @@
 import { jwtDecode } from "jwt-decode";
 import { NextRequest, NextResponse } from "next/server";
-import configService from "./services/config.service";
+import Config, { ParsedConfigValue } from "./types/config.type";
+import { parseConfigValue } from "./utils/parse-config-value";
 
 // This middleware redirects based on different conditions:
 // - Authentication state
@@ -10,6 +11,68 @@ import configService from "./services/config.service";
 export const config = {
   matcher: "/((?!api|static|.*\\..*|_next).*)",
 };
+
+const CONFIG_CACHE_TTL_MS = Number(
+  process.env.CONFIGS_CACHE_TTL_MS ?? "30000",
+);
+const CONFIG_FETCH_TIMEOUT_MS = Number(
+  process.env.CONFIGS_FETCH_TIMEOUT_MS ?? "5000",
+);
+
+/** In-memory cache of `/api/configs` for the Node middleware runtime (not per-request). */
+let configCache: { configs: Config[]; expiresAt: number } | null = null;
+
+/**
+ * Defaults aligned with `backend/prisma/seed/config.seed.ts` when the API is
+ * down and there is no warm cache (cold start / outage).
+ */
+const CONFIG_FALLBACK_BY_KEY: Record<string, ParsedConfigValue> = {
+  "share.allowRegistration": true,
+  "share.allowUnauthenticatedShares": false,
+  "smtp.enabled": false,
+  "legal.enabled": false,
+  "legal.imprintText": "",
+  "legal.imprintUrl": "",
+  "legal.privacyPolicyText": "",
+  "legal.privacyPolicyUrl": "",
+  "general.showHomePage": true,
+};
+
+async function loadConfigs(apiUrl: string): Promise<Config[]> {
+  const now = Date.now();
+  if (configCache && now < configCache.expiresAt) {
+    return configCache.configs;
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}/api/configs`, {
+      signal: AbortSignal.timeout(CONFIG_FETCH_TIMEOUT_MS),
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`configs HTTP ${response.status}`);
+    }
+    const body: unknown = await response.json();
+    if (!Array.isArray(body)) {
+      throw new Error("configs response is not an array");
+    }
+    configCache = {
+      configs: body as Config[],
+      expiresAt: Date.now() + CONFIG_CACHE_TTL_MS,
+    };
+    return configCache.configs;
+  } catch {
+    if (configCache) {
+      // Serve stale snapshot briefly; shorten refresh to avoid hammering a sick API.
+      configCache = {
+        ...configCache,
+        expiresAt: Date.now() + Math.min(CONFIG_CACHE_TTL_MS, 10_000),
+      };
+      return configCache.configs;
+    }
+    return [];
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const routes = {
@@ -27,12 +90,22 @@ export async function middleware(request: NextRequest) {
     disabled: new Routes([]),
   };
 
-  // Get config from backend
   const apiUrl = process.env.API_URL || "http://localhost:8080";
-  const config = await (await fetch(`${apiUrl}/api/configs`)).json();
+  const configList = await loadConfigs(apiUrl);
 
-  const getConfig = (key: string) => {
-    return configService.get(key, config);
+  const getConfig = (key: string): ParsedConfigValue => {
+    try {
+      if (configList.length > 0) {
+        return parseConfigValue(key, configList);
+      }
+    } catch {
+      /* fall through to fallback */
+    }
+    const fallback = CONFIG_FALLBACK_BY_KEY[key];
+    if (fallback !== undefined) {
+      return fallback;
+    }
+    throw new Error(`No config or fallback for ${key}`);
   };
 
   const route = request.nextUrl.pathname;
@@ -125,7 +198,7 @@ export async function middleware(request: NextRequest) {
       if (path == "/auth/signIn") {
         path = path + "?redirect=" + encodeURIComponent(route);
       }
-      return NextResponse.redirect(new URL(path, request.url));
+      return NextResponse.redirect(new URL(String(path), request.url));
     }
   }
 }

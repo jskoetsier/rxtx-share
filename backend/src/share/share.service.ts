@@ -2,10 +2,11 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { JwtService, JwtSignOptions } from "@nestjs/jwt";
-import { Share, User } from "@prisma/client";
+import { Prisma, Share, User } from "@prisma/client";
 import * as archiver from "archiver";
 import * as argon from "argon2";
 import * as fs from "fs";
@@ -20,14 +21,25 @@ import { parseRelativeDateToAbsolute } from "src/utils/date.util";
 import { SHARE_DIRECTORY } from "../constants";
 import { CreateShareDTO } from "./dto/createShare.dto";
 
+const sharePublicInclude = {
+  files: { orderBy: { name: "asc" as const } },
+  creator: true,
+  security: true,
+} satisfies Prisma.ShareInclude;
+
+export type SharePublicDto = Prisma.ShareGetPayload<{
+  include: typeof sharePublicInclude;
+}> & { hasPassword: boolean };
+
 @Injectable()
 export class ShareService {
+  private readonly logger = new Logger(ShareService.name);
+
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
     private fileService: FileService,
     private emailService: EmailService,
-    private config: ConfigService,
     private jwtService: JwtService,
     private reverseShareService: ReverseShareService,
     private clamScanService: ClamScanService,
@@ -56,7 +68,7 @@ export class ShareService {
 
       const expiresNever = moment(0).toDate() == parsedExpiration;
 
-      const maxExpiration = this.config.get("share.maxExpiration");
+      const maxExpiration = this.configService.get("share.maxExpiration");
       if (
         maxExpiration.value !== 0 &&
         (expiresNever ||
@@ -105,25 +117,32 @@ export class ShareService {
     return shareTuple;
   }
 
-  async createZip(shareId: string) {
-    if (this.config.get("s3.enabled")) return;
+  async createZip(shareId: string): Promise<void> {
+    if (this.configService.get("s3.enabled")) return;
 
     const path = `${SHARE_DIRECTORY}/${shareId}`;
 
     const files = await this.prisma.file.findMany({ where: { shareId } });
     const archive = archiver("zip", {
-      zlib: { level: this.config.get("share.zipCompressionLevel") },
+      zlib: { level: this.configService.get("share.zipCompressionLevel") },
     });
     const writeStream = fs.createWriteStream(`${path}/archive.zip`);
 
-    for (const file of files) {
-      archive.append(fs.createReadStream(`${path}/${file.id}`), {
-        name: file.name,
-      });
-    }
+    await new Promise<void>((resolve, reject) => {
+      const onError = (err: Error) => reject(err);
+      archive.on("error", onError);
+      writeStream.on("error", onError);
+      writeStream.on("close", resolve);
 
-    archive.pipe(writeStream);
-    await archive.finalize();
+      for (const file of files) {
+        archive.append(fs.createReadStream(`${path}/${file.id}`), {
+          name: file.name,
+        });
+      }
+
+      archive.pipe(writeStream);
+      void archive.finalize().catch(onError);
+    });
   }
 
   async complete(id: string, reverseShareToken?: string) {
@@ -137,6 +156,8 @@ export class ShareService {
       },
     });
 
+    if (!share) throw new NotFoundException("Share not found");
+
     if (await this.isShareCompleted(id))
       throw new BadRequestException("Share already completed");
 
@@ -145,11 +166,27 @@ export class ShareService {
         "You need at least on file in your share to complete it.",
       );
 
-    // Asynchronously create a zip of all files
-    if (share.files.length > 1)
-      this.createZip(id).then(() =>
-        this.prisma.share.update({ where: { id }, data: { isZipReady: true } }),
-      );
+    await this.clamScanService.checkAndRemove(share.id);
+    const afterScan = await this.prisma.share.findUnique({ where: { id } });
+    if (afterScan?.removedReason) {
+      throw new BadRequestException(afterScan.removedReason);
+    }
+
+    if (share.files.length > 1) {
+      try {
+        await this.createZip(id);
+        await this.prisma.share.update({
+          where: { id },
+          data: { isZipReady: true },
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to create zip for share ${id}`,
+          err instanceof Error ? err.stack : String(err),
+        );
+        throw new BadRequestException("Failed to create downloadable archive");
+      }
+    }
 
     // Send email for each recipient
     for (const recipient of share.recipients) {
@@ -163,7 +200,7 @@ export class ShareService {
     }
 
     const notifyReverseShareCreator = share.reverseShare
-      ? this.config.get("smtp.enabled") &&
+      ? this.configService.get("smtp.enabled") &&
         share.reverseShare.sendEmailNotification
       : undefined;
 
@@ -173,9 +210,6 @@ export class ShareService {
         share.id,
       );
     }
-
-    // Check if any file is malicious with ClamAV
-    void this.clamScanService.checkAndRemove(share.id);
 
     if (share.reverseShare) {
       await this.prisma.reverseShare.update({
@@ -248,25 +282,19 @@ export class ShareService {
     });
   }
 
-  async get(id: string): Promise<any> {
+  async get(id: string): Promise<SharePublicDto> {
     const share = await this.prisma.share.findUnique({
       where: { id },
-      include: {
-        files: {
-          orderBy: {
-            name: "asc",
-          },
-        },
-        creator: true,
-        security: true,
-      },
+      include: sharePublicInclude,
     });
+
+    if (!share) throw new NotFoundException("Share not found");
 
     if (share.removedReason)
       throw new NotFoundException(share.removedReason, "share_removed");
 
-    if (!share || !share.uploadLocked)
-      throw new NotFoundException("Share not found");
+    if (!share.uploadLocked) throw new NotFoundException("Share not found");
+
     return {
       ...share,
       hasPassword: !!share.security?.password,
@@ -299,7 +327,8 @@ export class ShareService {
   }
 
   async isShareCompleted(id: string) {
-    return (await this.prisma.share.findUnique({ where: { id } })).uploadLocked;
+    const row = await this.prisma.share.findUnique({ where: { id } });
+    return row?.uploadLocked ?? false;
   }
 
   async isShareIdAvailable(id: string) {
@@ -322,7 +351,9 @@ export class ShareService {
       },
     });
 
-    if (share?.security?.password) {
+    if (!share) throw new NotFoundException("Share not found");
+
+    if (share.security?.password) {
       if (!password) {
         throw new ForbiddenException(
           "This share is password protected",
@@ -352,9 +383,12 @@ export class ShareService {
   }
 
   async generateShareToken(shareId: string) {
-    const { expiration, createdAt } = await this.prisma.share.findUnique({
+    const row = await this.prisma.share.findUnique({
       where: { id: shareId },
     });
+    if (!row) throw new NotFoundException("Share not found");
+
+    const { expiration, createdAt } = row;
 
     const tokenPayload = {
       shareId,
@@ -363,7 +397,7 @@ export class ShareService {
     };
 
     const tokenOptions: JwtSignOptions = {
-      secret: this.config.get("internal.jwtSecret"),
+      secret: this.configService.get("internal.jwtSecret"),
     };
 
     if (!moment(expiration).isSame(0)) {
@@ -374,13 +408,16 @@ export class ShareService {
   }
 
   async verifyShareToken(shareId: string, token: string) {
-    const { expiration, createdAt } = await this.prisma.share.findUnique({
+    const row = await this.prisma.share.findUnique({
       where: { id: shareId },
     });
+    if (!row) return false;
+
+    const { expiration, createdAt } = row;
 
     try {
       const claims = this.jwtService.verify(token, {
-        secret: this.config.get("internal.jwtSecret"),
+        secret: this.configService.get("internal.jwtSecret"),
         // Ignore expiration if expiration is 0
         ignoreExpiration: moment(expiration).isSame(0),
       });

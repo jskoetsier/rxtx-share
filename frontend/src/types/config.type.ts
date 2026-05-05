@@ -1,3 +1,8 @@
+import type { Timespan } from "./timespan.type";
+
+/** Parsed backend config value (mirrors backend `ConfigService.get`). */
+export type ParsedConfigValue = string | number | boolean | Timespan;
+
 type Config = {
   key: string;
   defaultValue: string;

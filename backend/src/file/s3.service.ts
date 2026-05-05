@@ -297,6 +297,10 @@ export class S3FileService {
       const s3Instance = this.getS3Instance();
       const bucketName = this.config.get("s3.bucketName");
       const compressionLevel = this.config.get("share.zipCompressionLevel");
+      const zlibLevel =
+        typeof compressionLevel === "number"
+          ? compressionLevel
+          : parseInt(String(compressionLevel), 10);
 
       const prefix = `${this.getS3Path()}${shareId}/`;
 
@@ -313,7 +317,7 @@ export class S3FileService {
         }
 
         const archive = archiver("zip", {
-          zlib: { level: parseInt(compressionLevel) },
+          zlib: { level: zlibLevel },
         });
 
         archive.on("error", (err) => {

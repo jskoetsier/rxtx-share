@@ -66,6 +66,7 @@ export class AuthService {
           );
         }
       }
+      throw e;
     }
   }
 
@@ -260,7 +261,7 @@ export class AuthService {
         try {
           signOutFromProviderSupportedAndActivated = this.config.get(
             `oauth.${providerName}-signOut`,
-          );
+          ) as boolean;
         } catch (_) {
           // Ignore error if the provider is not supported or if the provider sign out is not activated
         }
@@ -278,7 +279,7 @@ export class AuthService {
             redirectURI.searchParams.append("id_token_hint", idTokenHint);
             redirectURI.searchParams.append(
               "client_id",
-              this.config.get(`oauth.${providerName}-clientId`),
+              this.config.get(`oauth.${providerName}-clientId`) as string,
             );
             return redirectURI.toString();
           }

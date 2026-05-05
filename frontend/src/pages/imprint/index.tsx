@@ -46,7 +46,7 @@ const Imprint = () => {
           },
         }}
       >
-        {config.get("legal.imprintText")}
+        {String(config.get("legal.imprintText"))}
       </Markdown>
     </>
   );

@@ -27,6 +27,7 @@ import useConfig from "../../hooks/config.hook";
 import useTranslate from "../../hooks/useTranslate.hook";
 import shareService from "../../services/share.service";
 import { MyReverseShare } from "../../types/share.type";
+import { Timespan } from "../../types/timespan.type";
 import { byteToHumanSizeString } from "../../utils/fileSize.util";
 import toast from "../../utils/toast.util";
 
@@ -74,8 +75,8 @@ const MyShares = () => {
           onClick={() =>
             showCreateReverseShareModal(
               modals,
-              config.get("smtp.enabled"),
-              config.get("share.maxExpiration"),
+              config.get("smtp.enabled") === true,
+              config.get("share.maxExpiration") as Timespan,
               getReverseShares,
             )
           }

@@ -17,6 +17,7 @@ import useUser from "../../hooks/user.hook";
 import shareService from "../../services/share.service";
 import { FileUpload } from "../../types/File.type";
 import { CreateShare, Share } from "../../types/share.type";
+import { Timespan } from "../../types/timespan.type";
 import toast from "../../utils/toast.util";
 import { useRouter } from "next/router";
 
@@ -47,10 +48,11 @@ const Upload = ({
     enabled: isUploading,
   });
 
-  const chunkSize = useRef(parseInt(config.get("share.chunkSize")));
+  const chunkSize = useRef(Number(config.get("share.chunkSize")));
 
-  maxShareSize ??= parseInt(config.get("share.maxSize"));
-  const autoOpenCreateUploadModal = config.get("share.autoOpenShareModal");
+  maxShareSize ??= Number(config.get("share.maxSize"));
+  const autoOpenCreateUploadModal =
+    config.get("share.autoOpenShareModal") === true;
 
   const uploadFiles = async (share: CreateShare, files: FileUpload[]) => {
     setisUploading(true);
@@ -138,12 +140,12 @@ const Upload = ({
       {
         isUserSignedIn: user ? true : false,
         isReverseShare,
-        allowUnauthenticatedShares: config.get(
-          "share.allowUnauthenticatedShares",
-        ),
-        enableEmailRecepients: config.get("email.enableShareEmailRecipients"),
-        maxExpiration: config.get("share.maxExpiration"),
-        shareIdLength: config.get("share.shareIdLength"),
+        allowUnauthenticatedShares:
+          config.get("share.allowUnauthenticatedShares") === true,
+        enableEmailRecepients:
+          config.get("email.enableShareEmailRecipients") === true,
+        maxExpiration: config.get("share.maxExpiration") as Timespan,
+        shareIdLength: Number(config.get("share.shareIdLength")),
         simplified,
       },
       files,

@@ -68,11 +68,13 @@ export abstract class GenericOidcProvider implements OAuthProvider<OidcToken> {
       endpoint +
       "?" +
       new URLSearchParams({
-        client_id: this.config.get(`oauth.${this.name}-clientId`),
+        client_id: String(
+          this.config.get(`oauth.${this.name}-clientId`),
+        ),
         response_type: "code",
         scope:
           this.name == "oidc"
-            ? this.config.get(`oauth.oidc-scope`)
+            ? String(this.config.get(`oauth.oidc-scope`))
             : "openid email profile",
         redirect_uri: this.getRedirectUri(),
         state,
@@ -90,8 +92,12 @@ export abstract class GenericOidcProvider implements OAuthProvider<OidcToken> {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        client_id: this.config.get(`oauth.${this.name}-clientId`),
-        client_secret: this.config.get(`oauth.${this.name}-clientSecret`),
+        client_id: String(
+          this.config.get(`oauth.${this.name}-clientId`),
+        ),
+        client_secret: String(
+          this.config.get(`oauth.${this.name}-clientSecret`),
+        ),
         grant_type: "authorization_code",
         code: query.code,
         redirect_uri: this.getRedirectUri(),

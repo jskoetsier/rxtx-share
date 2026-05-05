@@ -125,7 +125,7 @@ const SignInForm = ({ redirectPath }: { redirectPath: string }) => {
         setOauthProviders(providers.data);
         if (
           providers.data.length === 1 &&
-          config.get("oauth.disablePassword")
+          config.get("oauth.disablePassword") === true
         ) {
           setIsRedirectingToOauthProvider(true);
           router.push(getOAuthUrl(window.location.origin, providers.data[0]));
@@ -151,7 +151,7 @@ const SignInForm = ({ redirectPath }: { redirectPath: string }) => {
       <Title order={2} align="center" weight={900}>
         <FormattedMessage id="signin.title" />
       </Title>
-      {config.get("share.allowRegistration") && (
+      {config.get("share.allowRegistration") === true && (
         <Text color="dimmed" size="sm" align="center" mt={5}>
           <FormattedMessage id="signin.description" />{" "}
           <Anchor component={Link} href={"signUp"} size="sm">
@@ -160,7 +160,7 @@ const SignInForm = ({ redirectPath }: { redirectPath: string }) => {
         </Text>
       )}
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-        {config.get("oauth.disablePassword") || (
+        {config.get("oauth.disablePassword") !== true ? (
           <form
             onSubmit={form.onSubmit((values) => {
               signIn(values.emailOrUsername, values.password);
@@ -177,7 +177,7 @@ const SignInForm = ({ redirectPath }: { redirectPath: string }) => {
               mt="md"
               {...form.getInputProps("password")}
             />
-            {config.get("smtp.enabled") && (
+            {config.get("smtp.enabled") === true && (
               <Group position="right" mt="xs">
                 <Anchor component={Link} href="/auth/resetPassword" size="xs">
                   <FormattedMessage id="resetPassword.title" />
@@ -188,10 +188,12 @@ const SignInForm = ({ redirectPath }: { redirectPath: string }) => {
               <FormattedMessage id="signin.button.submit" />
             </Button>
           </form>
-        )}
+        ) : null}
         {oauthProviders.length > 0 && (
-          <Stack mt={config.get("oauth.disablePassword") ? undefined : "xl"}>
-            {config.get("oauth.disablePassword") ? (
+          <Stack
+            mt={config.get("oauth.disablePassword") === true ? undefined : "xl"}
+          >
+            {config.get("oauth.disablePassword") === true ? (
               <Group align="center" className={classes.signInWith}>
                 <Text>{t("signIn.oauth.signInWith")}</Text>
               </Group>

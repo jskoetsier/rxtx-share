@@ -52,9 +52,8 @@ export class ClamScanService {
           return { isInfected: false };
         });
 
-      const fileName = (
-        await this.prisma.file.findUnique({ where: { id: fileId } })
-      ).name;
+      const fileRow = await this.prisma.file.findUnique({ where: { id: fileId } });
+      const fileName = fileRow?.name ?? fileId;
 
       if (isInfected) {
         infectedFiles.push({ id: fileId, name: fileName });

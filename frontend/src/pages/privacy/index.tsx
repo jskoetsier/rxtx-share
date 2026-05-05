@@ -46,7 +46,7 @@ const PrivacyPolicy = () => {
           },
         }}
       >
-        {config.get("legal.privacyPolicyText")}
+        {String(config.get("legal.privacyPolicyText"))}
       </Markdown>
     </>
   );
