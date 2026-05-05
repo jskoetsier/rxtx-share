@@ -159,7 +159,7 @@ export abstract class GenericOidcProvider implements OAuthProvider<OidcToken> {
         if (Array.isArray(rolesClaim)) {
           roles = rolesClaim;
         }
-      } catch (e) {
+      } catch {
         this.logger.warn(
           `Roles not found at path ${roleConfig.path} in ID Token ${JSON.stringify(
             idTokenData,
@@ -199,7 +199,7 @@ export abstract class GenericOidcProvider implements OAuthProvider<OidcToken> {
     }
 
     return {
-      provider: this.name as any,
+      provider: this.name as OAuthSignInDto["provider"],
       email: idTokenData.email,
       providerId: idTokenData.sub,
       providerUsername: username,

@@ -77,15 +77,11 @@ Useful scripts (see each `package.json`):
 
 ## Documentation
 
-Extended guides (install variants, OAuth, upgrades, contributing) live in the **`docs/`** site sources in this repo and may be published separately; check the project’s documentation link in the repo metadata or `package.json` for the current URL.
+Extended guides (install variants, OAuth, upgrades) live in the **`docs/`** site sources in this repo and may be published separately; check the project’s documentation link in the repo metadata or `package.json` for the current URL.
 
 ## Security
 
 Report vulnerabilities responsibly; see `SECURITY.md`.
-
-## Contributing
-
-Translations and code contributions are welcome. Use the repository’s `CONTRIBUTING.md` and coding conventions (`eslint` / `prettier` as configured).
 
 ## License
 

@@ -212,7 +212,7 @@ export class S3FileService {
           Key: key,
         }),
       );
-    } catch (error) {
+    } catch {
       throw new Error("Could not delete file from S3");
     }
 
@@ -250,7 +250,7 @@ export class S3FileService {
           },
         }),
       );
-    } catch (error) {
+    } catch {
       throw new Error("Could not delete all files from S3");
     }
   }
@@ -270,7 +270,7 @@ export class S3FileService {
 
       // Return ContentLength which is the file size in bytes
       return headObjectResponse.ContentLength ?? 0;
-    } catch (error) {
+    } catch {
       throw new Error("Could not retrieve file size");
     }
   }
@@ -292,8 +292,9 @@ export class S3FileService {
     });
   }
 
-  getZip(shareId: string) {
-    return new Promise<Readable>(async (resolve, reject) => {
+  getZip(shareId: string): Promise<Readable> {
+    return new Promise<Readable>((resolve, reject) => {
+      void (async () => {
       const s3Instance = this.getS3Instance();
       const bucketName = this.config.get("s3.bucketName");
       const compressionLevel = this.config.get("share.zipCompressionLevel");
@@ -335,8 +336,6 @@ export class S3FileService {
           );
         }
 
-        let filesAdded = 0;
-
         const processNextFile = async (index: number) => {
           if (index >= fileKeys.length) {
             archive.finalize();
@@ -358,7 +357,6 @@ export class S3FileService {
               const fileStream = response.Body;
 
               fileStream.on("end", () => {
-                filesAdded++;
                 processNextFile(index + 1);
               });
 
@@ -384,7 +382,8 @@ export class S3FileService {
 
         reject(new InternalServerErrorException("Error creating ZIP file"));
       }
-    });
+    })();
+  });
   }
 
   getS3Path(): string {

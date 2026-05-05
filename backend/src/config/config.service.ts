@@ -47,7 +47,7 @@ export class ConfigService extends EventEmitter {
     let configFile: string = "";
     try {
       configFile = fs.readFileSync(CONFIG_FILE, "utf8");
-    } catch (e) {
+    } catch {
       this.logger.log(
         "Config.yaml is not set. Falling back to UI configuration.",
       );
@@ -98,7 +98,7 @@ export class ConfigService extends EventEmitter {
   get<K extends ConfigKey>(key: K): ConfigValueForKey<K>;
   get(key: string): ConfigParsedValue;
   // Implementation return is unspecific; overloads provide per-key types to callers.
-  get(key: string): any {
+  get(key: string): ConfigParsedValue {
     const configVariable = this.configVariables.filter(
       (variable) => `${variable.category}.${variable.name}` == key,
     )[0];
@@ -227,7 +227,7 @@ export class ConfigService extends EventEmitter {
     ];
 
     const validation = validations.find((validation) => validation.key == key);
-    if (validation && !validation.condition(value as any)) {
+    if (validation && !validation.condition(value as number)) {
       throw new BadRequestException(validation.message);
     }
   }

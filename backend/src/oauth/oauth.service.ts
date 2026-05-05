@@ -121,18 +121,18 @@ export class OAuthService {
     let username = preferredUsername
       .replace(/[^a-zA-Z0-9._]/g, "")
       .substring(0, 20);
-    while (true) {
-      const user = await this.prisma.user.findFirst({
+    let existing: { id: string } | null;
+    do {
+      existing = await this.prisma.user.findFirst({
         where: {
           username: username,
         },
       });
-      if (user) {
+      if (existing) {
         username = username + "_" + nanoid(10).replaceAll("-", "");
-      } else {
-        return username;
       }
-    }
+    } while (existing);
+    return username;
   }
 
   private async signUp(user: OAuthSignInDto, ip: string) {
