@@ -166,7 +166,7 @@ export default function Home() {
               </Button>
               <Button
                 component={Link}
-                href="https://github.com/stonith404/pingvin-share"
+                href="https://github.com/stonith404/rxtx-share"
                 target="_blank"
                 variant="default"
                 radius="xl"

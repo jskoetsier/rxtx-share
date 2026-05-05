@@ -3,15 +3,15 @@ import type { Config } from "@docusaurus/types";
 import { themes as prismThemes } from "prism-react-renderer";
 
 const config: Config = {
-  title: "Pingvin Share",
+  title: "Rxtx Share",
   tagline:
-    "Pingvin Share is self-hosted file sharing platform and an alternative for WeTransfer.",
-  favicon: "img/pingvinshare.svg",
+    "Rxtx Share is self-hosted file sharing platform and an alternative for WeTransfer.",
+  favicon: "img/rxtxshare.svg",
 
   url: "https://stonith404.github.io",
-  baseUrl: "/pingvin-share/",
+  baseUrl: "/rxtx-share/",
   organizationName: "stonith404",
-  projectName: "pingvin-share",
+  projectName: "rxtx-share",
 
   onBrokenLinks: "warn",
   onBrokenMarkdownLinks: "warn",
@@ -28,7 +28,7 @@ const config: Config = {
         docs: {
           routeBasePath: "/",
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/stonith404/pingvin-share/edit/main/docs",
+          editUrl: "https://github.com/stonith404/rxtx-share/edit/main/docs",
         },
         blog: false,
       } satisfies Preset.Options,
@@ -36,19 +36,19 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: "img/pingvinshare.svg",
+    image: "img/rxtxshare.svg",
     colorMode: {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: "Pingvin Share",
+      title: "Rxtx Share",
       logo: {
-        alt: "Pingvin Share Logo",
-        src: "img/pingvinshare.svg",
+        alt: "Rxtx Share Logo",
+        src: "img/rxtxshare.svg",
       },
       items: [
         {
-          href: "https://github.com/stonith404/pingvin-share",
+          href: "https://github.com/stonith404/rxtx-share",
           label: "GitHub",
           position: "right",
         },

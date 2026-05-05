@@ -21,13 +21,13 @@ const Intro = () => {
             <Logo height={80} width={80} />
           </Center>
           <Center>
-            <Title order={2}>Welcome to Pingvin Share</Title>
+            <Title order={2}>Welcome to Rxtx Share</Title>
           </Center>
           <Text>
-            If you enjoy Pingvin Share please ⭐️ it on{" "}
+            If you enjoy Rxtx Share please ⭐️ it on{" "}
             <Anchor
               target="_blank"
-              href="https://github.com/stonith404/pingvin-share"
+              href="https://github.com/stonith404/rxtx-share"
             >
               GitHub
             </Anchor>{" "}
@@ -40,14 +40,14 @@ const Intro = () => {
             </Anchor>{" "}
             if you want to support my work.
           </Text>
-          <Text>Enough talked, have fun with Pingvin Share!</Text>
+          <Text>Enough talked, have fun with Rxtx Share!</Text>
           <Text mt="lg">How to you want to continue?</Text>
           <Stack>
             <Button href="/admin/config/general" component={Link}>
               Customize configuration
             </Button>
             <Button href="/" component={Link} variant="light">
-              Explore Pingvin Share
+              Explore Rxtx Share
             </Button>
           </Stack>
         </Stack>
