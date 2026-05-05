@@ -4,21 +4,21 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import { Request } from "express";
 import * as moment from "moment";
 import { PrismaService } from "src/prisma/prisma.service";
 import { ShareSecurityGuard } from "src/share/guard/shareSecurity.guard";
-import { ShareService } from "src/share/share.service";
 import { ConfigService } from "src/config/config.service";
 
 @Injectable()
 export class FileSecurityGuard extends ShareSecurityGuard {
   constructor(
-    private _shareService: ShareService,
+    jwtService: JwtService,
     private _prisma: PrismaService,
-    _config: ConfigService,
+    configService: ConfigService,
   ) {
-    super(_shareService, _prisma, _config);
+    super(jwtService, _prisma, configService);
   }
 
   async canActivate(context: ExecutionContext) {
@@ -58,7 +58,10 @@ export class FileSecurityGuard extends ShareSecurityGuard {
         );
       }
 
-      await this._shareService.increaseViewCount(share);
+      await this._prisma.share.update({
+        where: { id: share.id },
+        data: { views: { increment: 1 } },
+      });
       return true;
     } else {
       return super.canActivate(context);

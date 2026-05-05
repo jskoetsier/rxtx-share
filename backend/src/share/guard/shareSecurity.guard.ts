@@ -4,10 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import { Request } from "express";
 import * as moment from "moment";
 import { PrismaService } from "src/prisma/prisma.service";
-import { ShareService } from "src/share/share.service";
 import { ConfigService } from "src/config/config.service";
 import { JwtGuard } from "src/auth/guard/jwt.guard";
 import { User } from "@prisma/client";
@@ -15,9 +15,9 @@ import { User } from "@prisma/client";
 @Injectable()
 export class ShareSecurityGuard extends JwtGuard {
   constructor(
-    private shareService: ShareService,
+    private jwtService: JwtService,
     private prisma: PrismaService,
-    configService: ConfigService,
+    private configService: ConfigService,
   ) {
     super(configService);
   }
@@ -52,7 +52,14 @@ export class ShareSecurityGuard extends JwtGuard {
         "share_password_required",
       );
 
-    if (!(await this.shareService.verifyShareToken(shareId, shareToken)))
+    if (
+      !(await this.verifyShareToken(
+        shareId,
+        shareToken,
+        share.createdAt,
+        share.expiration,
+      ))
+    )
       throw new ForbiddenException(
         "Share token required",
         "share_token_required",
@@ -79,5 +86,28 @@ export class ShareSecurityGuard extends JwtGuard {
       );
 
     return true;
+  }
+
+  private async verifyShareToken(
+    shareId: string,
+    token: string,
+    createdAt: Date,
+    expiration: Date,
+  ): Promise<boolean> {
+    if (!token) return false;
+
+    try {
+      const claims = this.jwtService.verify(token, {
+        secret: this.configService.get("internal.jwtSecret"),
+        ignoreExpiration: moment(expiration).isSame(0),
+      });
+
+      return (
+        claims.shareId == shareId &&
+        claims.shareCreatedAt == moment(createdAt).unix()
+      );
+    } catch {
+      return false;
+    }
   }
 }
