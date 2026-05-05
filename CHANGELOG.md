@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/stonith404/rxtx-share/compare/v1.14.0...v1.14.1) (2026-05-05)
+
+
+### Bug Fixes
+
+* refactor backend and frontend for clarity, security, and architecture ([dcafcdb](https://github.com/stonith404/rxtx-share/commit/dcafcdb))
+
 ## [1.13.0](https://github.com/stonith404/rxtx-share/compare/v1.12.0...v1.13.0) (2025-05-25)
 
 
