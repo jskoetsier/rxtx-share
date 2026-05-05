@@ -12,9 +12,7 @@ export const config = {
   matcher: "/((?!api|static|.*\\..*|_next).*)",
 };
 
-const CONFIG_CACHE_TTL_MS = Number(
-  process.env.CONFIGS_CACHE_TTL_MS ?? "30000",
-);
+const CONFIG_CACHE_TTL_MS = Number(process.env.CONFIGS_CACHE_TTL_MS ?? "30000");
 const CONFIG_FETCH_TIMEOUT_MS = Number(
   process.env.CONFIGS_FETCH_TIMEOUT_MS ?? "5000",
 );

@@ -36,7 +36,10 @@ export class ClamScanService {
   async check(shareId: string) {
     const clamScan = await this.ClamScan;
 
-    if (!clamScan) return [];
+    if (!clamScan) {
+      this.logger.error("ClamAV is not initialized, cannot scan files");
+      throw new Error("ClamAV is not initialized");
+    }
 
     const infectedFiles = [];
 
@@ -45,14 +48,22 @@ export class ClamScanService {
       .filter((file) => file != "archive.zip");
 
     for (const fileId of files) {
-      const { isInfected } = await clamScan
-        .isInfected(`${SHARE_DIRECTORY}/${shareId}/${fileId}`)
-        .catch(() => {
-          this.logger.log("ClamAV is not active");
-          return { isInfected: false };
-        });
+      let isInfected: boolean;
+      try {
+        const result = await clamScan.isInfected(
+          `${SHARE_DIRECTORY}/${shareId}/${fileId}`,
+        );
+        isInfected = result.isInfected;
+      } catch (error) {
+        this.logger.error(
+          `ClamAV scan failed for file ${fileId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw new Error(`ClamAV scan failed for file ${fileId}`);
+      }
 
-      const fileRow = await this.prisma.file.findUnique({ where: { id: fileId } });
+      const fileRow = await this.prisma.file.findUnique({
+        where: { id: fileId },
+      });
       const fileName = fileRow?.name ?? fileId;
 
       if (isInfected) {

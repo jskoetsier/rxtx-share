@@ -13,9 +13,9 @@ import {
 import { User } from "@prisma/client";
 import { Request, Response } from "express";
 import { nanoid } from "nanoid";
-import { AuthService } from "../auth/auth.service";
 import { GetUser } from "../auth/decorator/getUser.decorator";
 import { JwtGuard } from "../auth/guard/jwt.guard";
+import { TokenService } from "../auth/token.service";
 import { ConfigService } from "../config/config.service";
 import { OAuthCallbackDto } from "./dto/oauthCallback.dto";
 import { ErrorPageExceptionFilter } from "./filter/errorPageException.filter";
@@ -28,7 +28,7 @@ import { OAuthExceptionFilter } from "./filter/oauthException.filter";
 @Controller("oauth")
 export class OAuthController {
   constructor(
-    private authService: AuthService,
+    private tokenService: TokenService,
     private oauthService: OAuthService,
     private config: ConfigService,
     @Inject("OAUTH_PROVIDERS")
@@ -70,7 +70,7 @@ export class OAuthController {
   ) {
     const oauthToken = await this.providers[provider].getToken(query);
     const user = await this.providers[provider].getUserInfo(oauthToken, query);
-    const id = await this.authService.getIdOfCurrentUser(request);
+    const id = await this.tokenService.getIdOfCurrentUser(request);
 
     if (id) {
       await this.oauthService.link(
@@ -87,7 +87,7 @@ export class OAuthController {
         loginToken?: string;
       } = await this.oauthService.signIn(user, request.ip);
       if (token.accessToken) {
-        this.authService.addTokensToResponse(
+        this.tokenService.addTokensToResponse(
           response,
           token.refreshToken,
           token.accessToken,

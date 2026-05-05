@@ -144,8 +144,8 @@ export class AuthController {
   ) {
     const result = await this.authService.updatePassword(
       user,
-      dto.password,
       dto.oldPassword,
+      dto.password,
     );
 
     this.authService.addTokensToResponse(response, result.refreshToken);

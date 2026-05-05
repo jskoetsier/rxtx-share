@@ -1,19 +1,28 @@
-import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from "@nestjs/common";
 import { User } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { nanoid } from "nanoid";
-import { AuthService } from "../auth/auth.service";
+import { TokenService } from "../auth/token.service";
 import { ConfigService } from "../config/config.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { OAuthSignInDto } from "./dto/oauthSignIn.dto";
 import { ErrorPageException } from "./exceptions/errorPage.exception";
 import { OAuthProvider } from "./provider/oauthProvider.interface";
 
+const MAX_USERNAME_LENGTH = 20;
+const NANOID_SUFFIX_LENGTH = 10;
+
 @Injectable()
 export class OAuthService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-    @Inject(forwardRef(() => AuthService)) private auth: AuthService,
+    private tokenService: TokenService,
     @Inject("OAUTH_PLATFORMS") private platforms: string[],
     @Inject("OAUTH_PROVIDERS")
     private oAuthProviders: Record<string, OAuthProvider<unknown>>,
@@ -22,8 +31,7 @@ export class OAuthService {
 
   available(): string[] {
     return this.platforms.filter(
-      (platform) =>
-        this.config.get(`oauth.${platform}-enabled`) as boolean,
+      (platform) => this.config.get(`oauth.${platform}-enabled`) as boolean,
     );
   }
 
@@ -64,7 +72,9 @@ export class OAuthService {
         },
       });
       this.logger.log(`Successful login for user ${user.email} from IP ${ip}`);
-      return this.auth.generateToken(updatedUser, { idToken: user.idToken });
+      return this.tokenService.generateToken(updatedUser, {
+        idToken: user.idToken,
+      });
     }
 
     return this.signUp(user, ip);
@@ -120,7 +130,7 @@ export class OAuthService {
     // Only keep letters, numbers, dots, and underscores. Truncate to 20 characters.
     let username = preferredUsername
       .replace(/[^a-zA-Z0-9._]/g, "")
-      .substring(0, 20);
+      .substring(0, MAX_USERNAME_LENGTH);
     let existing: { id: string } | null;
     do {
       existing = await this.prisma.user.findFirst({
@@ -129,7 +139,8 @@ export class OAuthService {
         },
       });
       if (existing) {
-        username = username + "_" + nanoid(10).replaceAll("-", "");
+        username =
+          username + "_" + nanoid(NANOID_SUFFIX_LENGTH).replaceAll("-", "");
       }
     } while (existing);
     return username;
@@ -165,14 +176,15 @@ export class OAuthService {
         },
       });
       await this.updateIsAdmin(existingUser.id, user.isAdmin);
-      return this.auth.generateToken(existingUser, { idToken: user.idToken });
+      return this.tokenService.generateToken(existingUser, {
+        idToken: user.idToken,
+      });
     }
 
-    const result = await this.auth.signUp(
+    const newUser = await this.createOAuthUser(
       {
         email: user.email,
         username: await this.getAvailableUsername(user.providerUsername),
-        password: null,
       },
       ip,
       user.isAdmin,
@@ -183,11 +195,40 @@ export class OAuthService {
         provider: user.provider,
         providerUserId: user.providerId.toString(),
         providerUsername: user.providerUsername,
-        userId: result.user.id,
+        userId: newUser.id,
       },
     });
 
-    return result;
+    return this.tokenService.generateToken(newUser, { idToken: user.idToken });
+  }
+
+  private async createOAuthUser(
+    dto: { email: string; username: string },
+    ip: string,
+    isAdmin: boolean,
+  ) {
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email: dto.email,
+          username: dto.username,
+          password: null,
+          isAdmin,
+        },
+      });
+      this.logger.log(`User ${user.email} signed up from IP ${ip}`);
+      return user;
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError) {
+        if (e.code == "P2002") {
+          const duplicatedField: string = e.meta.target[0];
+          throw new BadRequestException(
+            `A user with this ${duplicatedField} already exists`,
+          );
+        }
+      }
+      throw e;
+    }
   }
 
   private async updateIsAdmin(userId: string, isAdmin?: boolean) {

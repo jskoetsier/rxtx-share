@@ -7,6 +7,13 @@ import { PrismaService } from "src/prisma/prisma.service";
 import { ReverseShareService } from "src/reverseShare/reverseShare.service";
 import { SHARE_DIRECTORY } from "../constants";
 
+const CRON_EVERY_HOUR = "0 * * * *";
+const CRON_EVERY_6_HOURS = "0 */6 * * *";
+const CRON_MIDNIGHT = "0 0 * * *";
+const CRON_EVERY_HOUR_OFFSET = "1 * * * *";
+const SHARE_RETENTION_DAYS = 1;
+const TEMP_FILE_RETENTION_DAYS = 1;
+
 @Injectable()
 export class JobsService {
   private readonly logger = new Logger(JobsService.name);
@@ -17,7 +24,7 @@ export class JobsService {
     private fileService: FileService,
   ) {}
 
-  @Cron("0 * * * *")
+  @Cron(CRON_EVERY_HOUR)
   async deleteExpiredShares() {
     const expiredShares = await this.prisma.share.findMany({
       where: {
@@ -42,7 +49,7 @@ export class JobsService {
     }
   }
 
-  @Cron("0 * * * *")
+  @Cron(CRON_EVERY_HOUR)
   async deleteExpiredReverseShares() {
     const expiredReverseShares = await this.prisma.reverseShare.findMany({
       where: {
@@ -61,11 +68,13 @@ export class JobsService {
     }
   }
 
-  @Cron("0 */6 * * *")
+  @Cron(CRON_EVERY_6_HOURS)
   async deleteUnfinishedShares() {
     const unfinishedShares = await this.prisma.share.findMany({
       where: {
-        createdAt: { lt: moment().subtract(1, "day").toDate() },
+        createdAt: {
+          lt: moment().subtract(SHARE_RETENTION_DAYS, "day").toDate(),
+        },
         uploadLocked: false,
       },
     });
@@ -83,7 +92,7 @@ export class JobsService {
     }
   }
 
-  @Cron("0 0 * * *")
+  @Cron(CRON_MIDNIGHT)
   deleteTemporaryFiles() {
     let filesDeleted = 0;
 
@@ -102,7 +111,7 @@ export class JobsService {
           `${SHARE_DIRECTORY}/${shareDirectory}/${file}`,
         );
         const isOlderThanOneDay = moment(stats.mtime)
-          .add(1, "day")
+          .add(TEMP_FILE_RETENTION_DAYS, "day")
           .isBefore(moment());
 
         if (isOlderThanOneDay) {
@@ -115,7 +124,7 @@ export class JobsService {
     this.logger.log(`Deleted ${filesDeleted} temporary files`);
   }
 
-  @Cron("1 * * * *")
+  @Cron(CRON_EVERY_HOUR_OFFSET)
   async deleteExpiredTokens() {
     const { count: refreshTokenCount } =
       await this.prisma.refreshToken.deleteMany({

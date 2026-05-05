@@ -68,9 +68,7 @@ export abstract class GenericOidcProvider implements OAuthProvider<OidcToken> {
       endpoint +
       "?" +
       new URLSearchParams({
-        client_id: String(
-          this.config.get(`oauth.${this.name}-clientId`),
-        ),
+        client_id: String(this.config.get(`oauth.${this.name}-clientId`)),
         response_type: "code",
         scope:
           this.name == "oidc"
@@ -92,9 +90,7 @@ export abstract class GenericOidcProvider implements OAuthProvider<OidcToken> {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        client_id: String(
-          this.config.get(`oauth.${this.name}-clientId`),
-        ),
+        client_id: String(this.config.get(`oauth.${this.name}-clientId`)),
         client_secret: String(
           this.config.get(`oauth.${this.name}-clientSecret`),
         ),

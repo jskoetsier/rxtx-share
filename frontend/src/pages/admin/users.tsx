@@ -65,7 +65,11 @@ const Users = () => {
         </Title>
         <Button
           onClick={() =>
-            showCreateUserModal(modals, config.get("smtp.enabled") === true, getUsers)
+            showCreateUserModal(
+              modals,
+              config.get("smtp.enabled") === true,
+              getUsers,
+            )
           }
           leftIcon={<TbPlus size={20} />}
         >

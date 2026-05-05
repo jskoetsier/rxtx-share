@@ -74,12 +74,12 @@ const FileList = <T extends FileListItem = FileListItem>({
     const file = files[index];
 
     if ("uploadingProgress" in file) {
-      files.splice(index, 1);
+      setFiles(files.filter((_, i) => i !== index));
     } else {
-      files[index] = { ...file, deleted: true };
+      setFiles(
+        files.map((f, i) => (i === index ? { ...f, deleted: true } : f)),
+      );
     }
-
-    setFiles([...files]);
   };
 
   const restore = (index: number) => {

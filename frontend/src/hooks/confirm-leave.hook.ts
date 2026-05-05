@@ -18,7 +18,7 @@ const useConfirmLeave = ({
       const confirmLeave = window.confirm(message);
       if (!confirmLeave) {
         router.events.emit("routeChangeError");
-        throw "Route change aborted.";
+        throw new Error("Route change aborted.");
       }
     };
 

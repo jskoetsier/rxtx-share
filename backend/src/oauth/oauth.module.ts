@@ -1,7 +1,7 @@
-import { forwardRef, Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
+import { TokenService } from "../auth/token.service";
 import { OAuthController } from "./oauth.controller";
 import { OAuthService } from "./oauth.service";
-import { AuthModule } from "../auth/auth.module";
 import { GitHubProvider } from "./provider/github.provider";
 import { GoogleProvider } from "./provider/google.provider";
 import { OAuthProvider } from "./provider/oauthProvider.interface";
@@ -12,6 +12,7 @@ import { MicrosoftProvider } from "./provider/microsoft.provider";
 @Module({
   controllers: [OAuthController],
   providers: [
+    TokenService,
     OAuthService,
     GitHubProvider,
     GoogleProvider,
@@ -51,7 +52,7 @@ import { MicrosoftProvider } from "./provider/microsoft.provider";
       inject: ["OAUTH_PROVIDERS"],
     },
   ],
-  imports: [forwardRef(() => AuthModule)],
-  exports: [OAuthService],
+  imports: [],
+  exports: [OAuthService, "OAUTH_PROVIDERS", "OAUTH_PLATFORMS"],
 })
 export class OAuthModule {}

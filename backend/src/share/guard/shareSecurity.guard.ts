@@ -58,8 +58,12 @@ export class ShareSecurityGuard extends JwtGuard {
         "share_token_required",
       );
 
-    // Run the JWTGuard to set the user
-    await super.canActivate(context);
+    // Run the JWTGuard to set the user, but allow unauthenticated access
+    try {
+      await super.canActivate(context);
+    } catch {
+      // Unauthenticated users may still access public shares
+    }
     const user = request.user as User;
 
     // Only the creator and reverse share creator can access the reverse share if it's not public

@@ -1,9 +1,4 @@
-import {
-  SiDiscord,
-  SiGithub,
-  SiGoogle,
-  SiOpenid,
-} from "react-icons/si";
+import { SiDiscord, SiGithub, SiGoogle, SiOpenid } from "react-icons/si";
 import { RiMicrosoftFill } from "react-icons/ri";
 import React from "react";
 import api from "../services/api.service";

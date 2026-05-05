@@ -13,8 +13,8 @@ import { CreateUserDTO } from "./dto/createUser.dto";
 import { UpdateUserDto } from "./dto/updateUser.dto";
 
 @Injectable()
-export class UserSevice {
-  private readonly logger = new Logger(UserSevice.name);
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
 
   constructor(
     private prisma: PrismaService,
@@ -170,47 +170,35 @@ export class UserSevice {
 
       if (user.username === placeholderUsername) {
         /* Give the user a human readable name if the user has been created with a placeholder username */
-        await this.prisma.user
-          .update({
-            where: {
-              id: user.id,
-            },
-            data: {
-              username: `user_${user.id}`,
-            },
-          })
-          .then((newUser) => {
-            user.username = newUser.username;
-          })
-          .catch((error) => {
-            this.logger.warn(
-              `Failed to update users ${user.id} placeholder username: ${inspect(error)}`,
-            );
+        try {
+          const newUser = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { username: `user_${user.id}` },
           });
+          user.username = newUser.username;
+        } catch (error) {
+          this.logger.warn(
+            `Failed to update users ${user.id} placeholder username: ${inspect(error)}`,
+          );
+        }
       }
 
       if (userEmail && userEmail !== user.email) {
         /* Sync users email if it has changed */
-        await this.prisma.user
-          .update({
-            where: {
-              id: user.id,
-            },
-            data: {
-              email: userEmail,
-            },
-          })
-          .then((newUser) => {
-            this.logger.log(
-              `Updated users ${user.id} email from ldap from ${user.email} to ${userEmail}.`,
-            );
-            user.email = newUser.email;
-          })
-          .catch((error) => {
-            this.logger.error(
-              `Failed to update users ${user.id} email to ${userEmail}: ${inspect(error)}`,
-            );
+        try {
+          const newUser = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { email: userEmail },
           });
+          this.logger.log(
+            `Updated users ${user.id} email from ldap from ${user.email} to ${userEmail}.`,
+          );
+          user.email = newUser.email;
+        } catch (error) {
+          this.logger.error(
+            `Failed to update users ${user.id} email to ${userEmail}: ${inspect(error)}`,
+          );
+        }
       }
 
       return user;

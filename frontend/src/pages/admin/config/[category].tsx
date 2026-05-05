@@ -30,7 +30,7 @@ import { AdminConfig, UpdateConfig } from "../../../types/config.type";
 import { camelToKebab } from "../../../utils/string.util";
 import toast from "../../../utils/toast.util";
 
-export default function AppShellDemo() {
+export default function AdminConfigPage() {
   const theme = useMantineTheme();
   const router = useRouter();
   const t = useTranslate();
@@ -54,23 +54,23 @@ export default function AppShellDemo() {
 
   const saveConfigVariables = async () => {
     if (logo) {
-      configService
-        .changeLogo(logo)
-        .then(() => {
-          setLogo(null);
-          toast.success(t("admin.config.notify.logo-success"));
-        })
-        .catch(toast.axiosError);
+      try {
+        await configService.changeLogo(logo);
+        setLogo(null);
+        toast.success(t("admin.config.notify.logo-success"));
+      } catch (e) {
+        toast.axiosError(e);
+      }
     }
 
     if (updatedConfigVariables.length > 0) {
-      await configService
-        .updateMany(updatedConfigVariables)
-        .then(() => {
-          setUpdatedConfigVariables([]);
-          toast.success(t("admin.config.notify.success"));
-        })
-        .catch(toast.axiosError);
+      try {
+        await configService.updateMany(updatedConfigVariables);
+        setUpdatedConfigVariables([]);
+        toast.success(t("admin.config.notify.success"));
+      } catch (e) {
+        toast.axiosError(e);
+      }
       void config.refresh();
     } else {
       toast.success(t("admin.config.notify.no-changes"));

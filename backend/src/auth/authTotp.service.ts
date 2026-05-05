@@ -11,6 +11,7 @@ import { ConfigService } from "src/config/config.service";
 import { PrismaService } from "src/prisma/prisma.service";
 import { AuthService } from "./auth.service";
 import { AuthSignInTotpDTO } from "./dto/authSignInTotp.dto";
+import { TokenService } from "./token.service";
 
 @Injectable()
 export class AuthTotpService {
@@ -18,6 +19,7 @@ export class AuthTotpService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private authService: AuthService,
+    private tokenService: TokenService,
   ) {}
 
   async signInTotp(dto: AuthSignInTotpDTO) {
@@ -54,8 +56,8 @@ export class AuthTotpService {
     });
 
     const { refreshToken, refreshTokenId } =
-      await this.authService.createRefreshToken(token.user.id);
-    const accessToken = await this.authService.createAccessToken(
+      await this.tokenService.createRefreshToken(token.user.id);
+    const accessToken = await this.tokenService.createAccessToken(
       token.user,
       refreshTokenId,
     );

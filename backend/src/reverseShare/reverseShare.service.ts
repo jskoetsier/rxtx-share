@@ -14,18 +14,17 @@ export class ReverseShareService {
     private fileService: FileService,
   ) {}
 
-  async create(data: CreateReverseShareDTO, creatorId: string) {
-    // Parse date string to date
+  async create(dto: CreateReverseShareDTO, creatorId: string) {
     const expirationDate = moment()
       .add(
-        data.shareExpiration.split("-")[0],
-        data.shareExpiration.split(
+        dto.shareExpiration.split("-")[0],
+        dto.shareExpiration.split(
           "-",
         )[1] as moment.unitOfTime.DurationConstructor,
       )
       .toDate();
 
-    const parsedExpiration = parseRelativeDateToAbsolute(data.shareExpiration);
+    const parsedExpiration = parseRelativeDateToAbsolute(dto.shareExpiration);
     const maxExpiration = this.config.get("share.maxExpiration");
     if (
       maxExpiration.value !== 0 &&
@@ -39,7 +38,7 @@ export class ReverseShareService {
 
     const globalMaxShareSize = this.config.get("share.maxSize");
 
-    if (globalMaxShareSize < Number(data.maxShareSize))
+    if (globalMaxShareSize < Number(dto.maxShareSize))
       throw new BadRequestException(
         `Max share size can't be greater than ${globalMaxShareSize} bytes.`,
       );
@@ -47,11 +46,11 @@ export class ReverseShareService {
     const reverseShare = await this.prisma.reverseShare.create({
       data: {
         shareExpiration: expirationDate,
-        remainingUses: data.maxUseCount,
-        maxShareSize: data.maxShareSize,
-        sendEmailNotification: data.sendEmailNotification,
-        simplified: data.simplified,
-        publicAccess: data.publicAccess,
+        remainingUses: dto.maxUseCount,
+        maxShareSize: dto.maxShareSize,
+        sendEmailNotification: dto.sendEmailNotification,
+        simplified: dto.simplified,
+        publicAccess: dto.publicAccess,
         creatorId,
       },
     });

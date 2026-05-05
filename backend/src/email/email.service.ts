@@ -8,6 +8,8 @@ import * as moment from "moment";
 import * as nodemailer from "nodemailer";
 import { ConfigService } from "src/config/config.service";
 
+const SMTP_SECURE_PORT = 465;
+
 @Injectable()
 export class EmailService {
   constructor(private config: ConfigService) {}
@@ -23,7 +25,7 @@ export class EmailService {
     return nodemailer.createTransport({
       host: this.config.get("smtp.host"),
       port: this.config.get("smtp.port"),
-      secure: this.config.get("smtp.port") == 465,
+      secure: this.config.get("smtp.port") == SMTP_SECURE_PORT,
       auth:
         username || password ? { user: username, pass: password } : undefined,
       tls: {
@@ -35,19 +37,19 @@ export class EmailService {
   }
 
   private async sendMail(email: string, subject: string, text: string) {
-    await this.getTransporter()
-      .sendMail({
+    try {
+      await this.getTransporter().sendMail({
         from: `"${this.config.get("general.appName")}" <${this.config.get(
           "smtp.email",
         )}>`,
         to: email,
         subject,
         text,
-      })
-      .catch((e) => {
-        this.logger.error(e);
-        throw new InternalServerErrorException("Failed to send email");
       });
+    } catch (e) {
+      this.logger.error(e);
+      throw new InternalServerErrorException("Failed to send email");
+    }
   }
 
   async sendMailToShareRecipients(

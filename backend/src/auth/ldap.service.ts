@@ -1,4 +1,9 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from "@nestjs/common";
 import { inspect } from "node:util";
 import { ConfigService } from "../config/config.service";
 import { Client, Entry, InvalidCredentialsError } from "ldapts";
@@ -14,7 +19,7 @@ export class LdapService {
   private async createLdapConnection(): Promise<Client> {
     const ldapUrl = this.serviceConfig.get("ldap.url");
     if (!ldapUrl) {
-      throw new Error("LDAP server URL is not defined");
+      throw new InternalServerErrorException("LDAP server URL is not defined");
     }
 
     const ldapClient = new Client({
@@ -32,7 +37,9 @@ export class LdapService {
         );
       } catch (error) {
         this.logger.warn(`Failed to bind to default user: ${error}`);
-        throw new Error("failed to bind to default user");
+        throw new InternalServerErrorException(
+          "failed to bind to default user",
+        );
       }
     }
 

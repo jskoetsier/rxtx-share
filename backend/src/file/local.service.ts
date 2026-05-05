@@ -24,7 +24,7 @@ export class LocalFileService {
   ) {}
 
   async create(
-    data: string,
+    base64Chunk: string,
     chunk: { index: number; total: number },
     file: { id?: string; name: string },
     shareId: string,
@@ -52,7 +52,6 @@ export class LocalFileService {
       diskFileSize = 0;
     }
 
-    // If the sent chunk index and the expected chunk index doesn't match throw an error
     const chunkSize = this.config.get("share.chunkSize");
     const expectedChunkIndex = Math.ceil(diskFileSize / chunkSize);
 
@@ -63,7 +62,7 @@ export class LocalFileService {
         expectedChunkIndex,
       });
 
-    const buffer = Buffer.from(data, "base64");
+    const buffer = Buffer.from(base64Chunk, "base64");
 
     // Check if there is enough space on the server
     const space = await fs.statfs(SHARE_DIRECTORY);

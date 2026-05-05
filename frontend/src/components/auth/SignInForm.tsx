@@ -93,35 +93,35 @@ const SignInForm = ({ redirectPath }: { redirectPath: string }) => {
   });
 
   const signIn = async (email: string, password: string) => {
-    await authService
-      .signIn(email.trim(), password.trim())
-      .then(async (response) => {
-        if (response.data["loginToken"]) {
-          // Prompt the user to enter their totp code
-          showNotification({
-            icon: <TbInfoCircle />,
-            color: "blue",
-            radius: "md",
-            title: t("signIn.notify.totp-required.title"),
-            message: t("signIn.notify.totp-required.description"),
-          });
-          router.push(
-            `/auth/totp/${
-              response.data["loginToken"]
-            }?redirect=${encodeURIComponent(redirectPath)}`,
-          );
-        } else {
-          await refreshUser();
-          router.replace(safeRedirectPath(redirectPath));
-        }
-      })
-      .catch(toast.axiosError);
+    try {
+      const response = await authService.signIn(email.trim(), password.trim());
+      if (response.data["loginToken"]) {
+        // Prompt the user to enter their totp code
+        showNotification({
+          icon: <TbInfoCircle />,
+          color: "blue",
+          radius: "md",
+          title: t("signIn.notify.totp-required.title"),
+          message: t("signIn.notify.totp-required.description"),
+        });
+        router.push(
+          `/auth/totp/${
+            response.data["loginToken"]
+          }?redirect=${encodeURIComponent(redirectPath)}`,
+        );
+      } else {
+        await refreshUser();
+        router.replace(safeRedirectPath(redirectPath));
+      }
+    } catch (e) {
+      toast.axiosError(e);
+    }
   };
 
   useEffect(() => {
-    authService
-      .getAvailableOAuth()
-      .then((providers) => {
+    const fetchProviders = async () => {
+      try {
+        const providers = await authService.getAvailableOAuth();
         setOauthProviders(providers.data);
         if (
           providers.data.length === 1 &&
@@ -130,8 +130,11 @@ const SignInForm = ({ redirectPath }: { redirectPath: string }) => {
           setIsRedirectingToOauthProvider(true);
           router.push(getOAuthUrl(window.location.origin, providers.data[0]));
         }
-      })
-      .catch(toast.axiosError);
+      } catch (e) {
+        toast.axiosError(e);
+      }
+    };
+    fetchProviders();
   }, []);
 
   if (!oauthProviders) return null;

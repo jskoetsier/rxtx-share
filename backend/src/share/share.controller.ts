@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   Post,
   Req,
@@ -30,6 +31,11 @@ import { ShareSecurityGuard } from "./guard/shareSecurity.guard";
 import { ShareTokenSecurity } from "./guard/shareTokenSecurity.guard";
 import { ShareService } from "./share.service";
 import { CompletedShareDTO } from "./dto/shareComplete.dto";
+
+const SHARE_RATE_LIMIT = { limit: 10, ttl: 60 };
+const SHARE_TOKEN_RATE_LIMIT = { limit: 20, ttl: 5 * 60 };
+const MAX_SHARE_TOKEN_COOKIES = 10;
+
 @Controller("shares")
 export class ShareController {
   constructor(
@@ -83,7 +89,7 @@ export class ShareController {
   }
 
   @Post(":id/complete")
-  @HttpCode(202)
+  @HttpCode(HttpStatus.ACCEPTED)
   @UseGuards(CreateShareGuard, ShareOwnerGuard)
   async complete(@Param("id") id: string, @Req() request: Request) {
     const { reverse_share_token } = request.cookies;
@@ -101,27 +107,23 @@ export class ShareController {
   @Delete(":id")
   @UseGuards(ShareOwnerGuard)
   async remove(@Param("id") id: string, @GetUser() user: User) {
-    const isDeleterAdmin = user?.isAdmin === true;
-    await this.shareService.remove(id, isDeleterAdmin);
+    if (user?.isAdmin) {
+      await this.shareService.removeShareAsAdmin(id);
+    } else {
+      await this.shareService.removeOwnShare(id);
+    }
   }
 
   @Throttle({
-    default: {
-      limit: 10,
-      ttl: 60,
-    },
+    default: SHARE_RATE_LIMIT,
   })
   @Get("isShareIdAvailable/:id")
   async isShareIdAvailable(@Param("id") id: string) {
     return this.shareService.isShareIdAvailable(id);
   }
 
-  @HttpCode(200)
   @Throttle({
-    default: {
-      limit: 20,
-      ttl: 5 * 60,
-    },
+    default: SHARE_TOKEN_RATE_LIMIT,
   })
   @UseGuards(ShareTokenSecurity)
   @Post(":id/token")
@@ -162,10 +164,10 @@ export class ShareController {
 
     expiredTokens.forEach((cookie) => response.clearCookie(cookie.key));
 
-    if (validTokens.length > 10) {
+    if (validTokens.length > MAX_SHARE_TOKEN_COOKIES) {
       validTokens
         .sort((a, b) => a.payload.exp - b.payload.exp)
-        .slice(0, -10)
+        .slice(0, -MAX_SHARE_TOKEN_COOKIES)
         .forEach((cookie) => response.clearCookie(cookie.key));
     }
   }

@@ -63,8 +63,7 @@ const Admin = () => {
             {
               title: "Update",
               icon: TbRefresh,
-              route:
-                "https://github.com/stonith404/rxtx-share/releases/latest",
+              route: "https://github.com/stonith404/rxtx-share/releases/latest",
             },
           ]);
         }

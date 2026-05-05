@@ -29,7 +29,7 @@ export class FileService {
   }
 
   async create(
-    data: string,
+    base64Chunk: string,
     chunk: { index: number; total: number },
     file: {
       id?: string;
@@ -38,7 +38,7 @@ export class FileService {
     shareId: string,
   ) {
     const storageService = this.getStorageService();
-    return storageService.create(data, chunk, file, shareId);
+    return storageService.create(base64Chunk, chunk, file, shareId);
   }
 
   async get(shareId: string, fileId: string): Promise<File> {
@@ -62,16 +62,6 @@ export class FileService {
   async getZip(shareId: string): Promise<Readable> {
     const storageService = this.getStorageService();
     return await storageService.getZip(shareId);
-  }
-
-  private async streamToUint8Array(stream: Readable): Promise<Uint8Array> {
-    const chunks: Buffer[] = [];
-
-    return new Promise((resolve, reject) => {
-      stream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      stream.on("end", () => resolve(new Uint8Array(Buffer.concat(chunks))));
-      stream.on("error", reject);
-    });
   }
 }
 

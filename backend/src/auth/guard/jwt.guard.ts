@@ -8,10 +8,6 @@ export class JwtGuard extends AuthGuard("jwt") {
     super();
   }
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    try {
-      return (await super.canActivate(context)) as boolean;
-    } catch {
-      return this.config.get("share.allowUnauthenticatedShares");
-    }
+    return (await super.canActivate(context)) as boolean;
   }
 }

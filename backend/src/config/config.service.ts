@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
@@ -14,14 +15,28 @@ import { stringToTimespan } from "src/utils/date.util";
 import { parse as yamlParse } from "yaml";
 import { YamlConfig } from "../../prisma/seed/config.variables";
 import { CONFIG_FILE } from "src/constants";
-import type { ConfigKey, ConfigParsedValue, ConfigValueForKey } from "./config-value.types";
+import type {
+  ConfigKey,
+  ConfigParsedValue,
+  ConfigValueForKey,
+} from "./config-value.types";
 
-export type { ConfigKey, ConfigParsedValue, ConfigValueForKey } from "./config-value.types";
+export type {
+  ConfigKey,
+  ConfigParsedValue,
+  ConfigValueForKey,
+} from "./config-value.types";
 
 /**
  * ConfigService extends EventEmitter to allow listening for config updates,
  * now only `update` event will be emitted.
  */
+const DECIMAL_RADIX = 10;
+const MIN_SHARE_ID_LENGTH = 2;
+const MAX_SHARE_ID_LENGTH = 50;
+const MIN_ZIP_COMPRESSION_LEVEL = 0;
+const MAX_ZIP_COMPRESSION_LEVEL = 9;
+
 @Injectable()
 export class ConfigService extends EventEmitter {
   yamlConfig?: YamlConfig;
@@ -103,18 +118,19 @@ export class ConfigService extends EventEmitter {
       (variable) => `${variable.category}.${variable.name}` == key,
     )[0];
 
-    if (!configVariable) throw new Error(`Config variable ${key} not found`);
+    if (!configVariable)
+      throw new NotFoundException(`Config variable ${key} not found`);
 
     const value = configVariable.value ?? configVariable.defaultValue;
 
     if (configVariable.type == "number" || configVariable.type == "filesize")
-      return parseInt(value, 10);
+      return parseInt(value, DECIMAL_RADIX);
     if (configVariable.type == "boolean") return value == "true";
     if (configVariable.type == "string" || configVariable.type == "text")
       return value;
     if (configVariable.type == "timespan") return stringToTimespan(value);
 
-    throw new Error(
+    throw new InternalServerErrorException(
       `Unsupported config type ${(configVariable as Config).type} for ${key}`,
     );
   }
@@ -146,7 +162,9 @@ export class ConfigService extends EventEmitter {
     });
   }
 
-  async updateMany(data: { key: string; value: string | number | boolean }[]) {
+  async updateMany(
+    updates: { key: string; value: string | number | boolean }[],
+  ) {
     if (!this.isEditAllowed())
       throw new BadRequestException(
         "You are only allowed to update config variables via the config.yaml file",
@@ -154,7 +172,7 @@ export class ConfigService extends EventEmitter {
 
     const response: Config[] = [];
 
-    for (const variable of data) {
+    for (const variable of updates) {
       response.push(await this.update(variable.key, variable.value));
     }
 
@@ -215,13 +233,16 @@ export class ConfigService extends EventEmitter {
     const validations = [
       {
         key: "share.shareIdLength",
-        condition: (value: number) => value >= 2 && value <= 50,
-        message: "Share ID length must be between 2 and 50",
+        condition: (value: number) =>
+          value >= MIN_SHARE_ID_LENGTH && value <= MAX_SHARE_ID_LENGTH,
+        message: `Share ID length must be between ${MIN_SHARE_ID_LENGTH} and ${MAX_SHARE_ID_LENGTH}`,
       },
       {
         key: "share.zipCompressionLevel",
-        condition: (value: number) => value >= 0 && value <= 9,
-        message: "Zip compression level must be between 0 and 9",
+        condition: (value: number) =>
+          value >= MIN_ZIP_COMPRESSION_LEVEL &&
+          value <= MAX_ZIP_COMPRESSION_LEVEL,
+        message: `Zip compression level must be between ${MIN_ZIP_COMPRESSION_LEVEL} and ${MAX_ZIP_COMPRESSION_LEVEL}`,
       },
       // TODO add validation for timespan type
     ];

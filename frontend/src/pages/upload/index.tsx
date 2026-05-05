@@ -22,8 +22,6 @@ import toast from "../../utils/toast.util";
 import { useRouter } from "next/router";
 
 const promiseLimit = pLimit(3);
-let errorToastShown = false;
-let createdShare: Share;
 
 const Upload = ({
   maxShareSize,
@@ -41,7 +39,9 @@ const Upload = ({
   const { user } = useUser();
   const config = useConfig();
   const [files, setFiles] = useState<FileUpload[]>([]);
-  const [isUploading, setisUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const errorToastShownRef = useRef(false);
+  const createdShareRef = useRef<Share | null>(null);
 
   useConfirmLeave({
     message: t("upload.notify.confirm-leave"),
@@ -55,14 +55,17 @@ const Upload = ({
     config.get("share.autoOpenShareModal") === true;
 
   const uploadFiles = async (share: CreateShare, files: FileUpload[]) => {
-    setisUploading(true);
+    setIsUploading(true);
 
     try {
       const isReverseShare = router.pathname != "/upload";
-      createdShare = await shareService.create(share, isReverseShare);
+      createdShareRef.current = await shareService.create(
+        share,
+        isReverseShare,
+      );
     } catch (e) {
       toast.axiosError(e);
-      setisUploading(false);
+      setIsUploading(false);
       return;
     }
 
@@ -89,6 +92,8 @@ const Upload = ({
         // If the file is 0 bytes, we still need to upload 1 chunk
         if (chunks == 0) chunks++;
 
+        if (!createdShareRef.current) return;
+
         for (let chunkIndex = 0; chunkIndex < chunks; chunkIndex++) {
           const from = chunkIndex * chunkSize.current;
           const to = from + chunkSize.current;
@@ -96,7 +101,7 @@ const Upload = ({
           try {
             await shareService
               .uploadFile(
-                createdShare.id,
+                createdShareRef.current.id,
                 blob,
                 {
                   id: fileId,
@@ -169,7 +174,7 @@ const Upload = ({
     ).length;
 
     if (fileErrorCount > 0) {
-      if (!errorToastShown) {
+      if (!errorToastShownRef.current) {
         toast.error(
           t("upload.notify.count-failed", { count: fileErrorCount }),
           {
@@ -178,10 +183,10 @@ const Upload = ({
           },
         );
       }
-      errorToastShown = true;
+      errorToastShownRef.current = true;
     } else {
       cleanNotifications();
-      errorToastShown = false;
+      errorToastShownRef.current = false;
     }
 
     // Complete share
@@ -190,14 +195,16 @@ const Upload = ({
       files.every((file) => file.uploadingProgress >= 100) &&
       fileErrorCount == 0
     ) {
-      shareService
-        .completeShare(createdShare.id)
-        .then((share) => {
-          setisUploading(false);
-          showCompletedUploadModal(modals, share);
-          setFiles([]);
-        })
-        .catch(() => toast.error(t("upload.notify.generic-error")));
+      if (createdShareRef.current) {
+        shareService
+          .completeShare(createdShareRef.current.id)
+          .then((share) => {
+            setIsUploading(false);
+            showCompletedUploadModal(modals, share);
+            setFiles([]);
+          })
+          .catch(() => toast.error(t("upload.notify.generic-error")));
+      }
     }
   }, [files]);
 
